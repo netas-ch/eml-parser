@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<!--
+Copyright © 2023 Netas Ltd., Switzerland.
+@author  Lukas Buchs, lukas.buchs@netas.ch
+@date    2023-02-16
+@license MIT
+-->
+<html>
+    <head>
+        <title>eml file parser</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="../src/MultiPartParser.js"></script>
+        <script src="../src/EmlReader.js"></script>
+        <script>
+            window.onload = function() {
+                //let data = await fetch('eml/test.eml');
+                //let buf = await data.arrayBuffer();
+
+                document.getElementById('drop_zone').addEventListener('drop', (e)=> {
+                   e.preventDefault();
+                   document.getElementById('drop_zone').className = '';
+
+                   if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                       const file = e.dataTransfer.files.item(0);
+
+                       file.arrayBuffer().then(parseEml);
+                   }
+
+
+
+                });
+                document.getElementById('drop_zone').addEventListener('dragover', (e)=> {
+                   e.preventDefault();
+                   document.getElementById('drop_zone').className = 'hover';
+                });
+                document.getElementById('drop_zone').addEventListener('dragleave', (e)=> {
+                   e.preventDefault();
+                   document.getElementById('drop_zone').className = '';
+                });
+
+            };
+
+            function parseEml(buf) {
+                try {
+                    let test = new EmlReader(buf);
+
+                    let el = document.getElementById('list');
+                    while (el.hasChildNodes()) {
+                        el.removeChild(el.firstChild);
+                    }
+
+                    addNote('getDate', test.getDate());
+                    addNote('getSubject', test.getSubject());
+                    addNote('getFrom', test.getFrom());
+                    addNote('getCc', test.getCc());
+                    addNote('getTo', test.getTo());
+                    addNote('getReplyTo', test.getReplyTo());
+
+                    let files = test.getAttachments();
+
+                    for (let i = 0; i < files.length; i++) {
+                        addNote('attachment ' + (i+1) + ' filename', files[i].filename);
+                        addNote('attachment ' + (i+1) + ' content-type', files[i].contentType);
+                        addNote('attachment ' + (i+1) + ' filesize', files[i].filesize);
+                    }
+
+                    addNote('getMessageText', test.getMessageText());
+                    addNote('getMessageHtml', test.getMessageHtml());
+                } catch (e) {
+                    addNote('error', e.message);
+                }
+            }
+
+            function addNote(key, val) {
+                let tr = document.createElement('tr');
+                let tdk = document.createElement('td');
+                let tdv = document.createElement('td');
+
+                tdk.innerText = key;
+                tdv.innerText = val;
+
+                tr.appendChild(tdk);
+                tr.appendChild(tdv);
+                document.getElementById('list').appendChild(tr);
+            }
+
+        </script>
+        <style>
+            body {
+                font-family: "Segoe UI Light", sans-serif;
+                font-size: 1.1em;
+            }
+
+            h1 {
+                margin:20px;
+                font-size: 1.5em;
+                font-weight: normal;
+            }
+
+            #drop_zone {
+                border:1px solid black;
+                padding:20px;
+                margin:20px;
+                border-radius: 20px;
+                font-style: italic;
+                text-align: center;
+                transition: background-color 1s;
+            }
+            #drop_zone.hover {
+                background-color: #009900;
+            }
+
+            table {
+                border-collapse: collapse;
+                padding:20px;
+                margin:20px;
+                max-width: 100%;
+            }
+
+            table tr td {
+                border: 1px solid grey;
+                padding: 8px;
+                vertical-align: top;
+            }
+
+            table tr td:first-child {
+                font-weight: bold;
+            }
+
+            table tr:nth-child(even) td {
+                background-color: #f9f9f9;
+            }
+
+            .cpr {
+                text-align: center;
+                font-size: 0.7em;
+            }
+
+            .cpr a {
+                color: black;
+                text-decoration: underline;
+            }
+
+
+        </style>
+    </head>
+    <body>
+
+        <h1>eml file parser</h1>
+
+        <div id="drop_zone" style="">
+            <p>drop your eml file here</p>
+        </div>
+
+        <table>
+            <tbody id="list">
+                <tr>
+                    <td>Key</td>
+                    <td>value</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="cpr">
+            <p>Copyright &copy; 2023 <a href="https://www.netas.ch/" target="_blank">Netas AG</a> - MIT Licensed</p>
+        </div>
+
+    </body>
+</html>
