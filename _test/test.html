@@ -10,12 +10,10 @@ Copyright © 2023 Netas Ltd., Switzerland.
         <title>eml file parser</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <script src="../src/MultiPartParser.js"></script>
-        <script src="../src/EmlReader.js"></script>
         <script>
+
+
             window.onload = function() {
-                //let data = await fetch('eml/test.eml');
-                //let buf = await data.arrayBuffer();
 
                 document.getElementById('drop_zone').addEventListener('drop', (e)=> {
                    e.preventDefault();
@@ -41,9 +39,10 @@ Copyright © 2023 Netas Ltd., Switzerland.
 
             };
 
-            function parseEml(buf) {
+            async function parseEml(buf) {
                 try {
-                    let test = new EmlReader(buf);
+                    const emlr = await import('../src/EmlReader.js');
+                    let test = new emlr.EmlReader(buf);
 
                     let el = document.getElementById('list');
                     while (el.hasChildNodes()) {

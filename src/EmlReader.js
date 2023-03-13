@@ -5,12 +5,15 @@
  * @date    2023-02-17
  */
 
+import {MultiPartParser} from './MultiPartParser.js';
+export class EmlReader {
 
-class EmlReader {
-
+    /**
+     * @param {ArrayBuffer|Uint8Array} rawContent
+     * @returns {EmlReader}
+     */
     constructor(arrayBuffer) {
         this._multipartParser = new MultiPartParser(arrayBuffer);
-
     }
 
     getDate() {

@@ -6,7 +6,7 @@
  */
 
 
-class MultiPartParser {
+export class MultiPartParser {
     #headers;
     #body = null;
     #multiParts;
@@ -89,6 +89,10 @@ class MultiPartParser {
     // PUBLIC
     // *******************
 
+    /**
+     * returns the content type as a object.
+     * @returns {Object}
+     */
     getContentType() {
         let ct = this.getHeader('Content-Type');
         if (ct) {
@@ -105,6 +109,12 @@ class MultiPartParser {
         return this.#body;
     }
 
+    /**
+     * sarch a MultiPart with a specific media type
+     * @param {String} mediaType
+     * @param {String|null} subType
+     * @returns {MultiPartParser|null}
+     */
     getPartByContentType(mediaType, subType=null) {
         let el = this.#recursiveGetByContentType(this, mediaType, subType);
         if (el) {
@@ -114,6 +124,13 @@ class MultiPartParser {
         return null;
     }
 
+    /**
+     * returns a header. If a header occurs more than once, a array is returned.
+     * @param {String} key
+     * @param {Boolean} decode
+     * @param {Boolean} removeLineBreaks
+     * @returns {String|Array|null}
+     */
     getHeader(key, decode=false, removeLineBreaks=false) {
         let val = null;
 
@@ -122,11 +139,19 @@ class MultiPartParser {
         }
 
         if (val && decode) {
-            val = this.#decodeRfc1342(val);
+            if (typeof val === 'string') {
+                val = this.#decodeRfc1342(val);
+            } else {
+                val = val.map(this.#decodeRfc1342);
+            }
         }
 
         if (val && removeLineBreaks) {
-            val = val.replace(/\r?\n\s/g, '');
+            if (typeof val === 'string') {
+                val = val.replace(/\r?\n\s/g, '');
+            } else {
+                val = val.map((v) => { return v.replace(/\r?\n\s/g, ''); });
+            }
         }
 
         return val;
