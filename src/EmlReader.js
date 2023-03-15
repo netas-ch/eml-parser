@@ -9,15 +9,15 @@ import {MultiPartParser} from './MultiPartParser.js';
 export class EmlReader {
 
     /**
-     * @param {ArrayBuffer|Uint8Array} rawContent
+     * @param {ArrayBuffer|Uint8Array} arrayBuffer
      * @returns {EmlReader}
      */
     constructor(arrayBuffer) {
-        this._multipartParser = new MultiPartParser(arrayBuffer);
+        this.#multipartParser = new MultiPartParser(arrayBuffer);
     }
 
     getDate() {
-        let date = this._multipartParser.getHeader('date');
+        let date = this.#multipartParser.getHeader('date');
         if (date) {
             return new Date(date);
         }
@@ -25,27 +25,31 @@ export class EmlReader {
     }
 
     getSubject() {
-        return this._multipartParser.getHeader('subject', true, true);
+        return this.#multipartParser.getHeader('subject', true, true);
     }
 
     getFrom() {
-        return this._multipartParser.getHeader('from', true, true);
+        return this.#multipartParser.getHeader('from', true, true);
     }
 
     getCc() {
-        return this._multipartParser.getHeader('cc', true, true);
+        return this.#multipartParser.getHeader('cc', true, true);
     }
 
     getTo() {
-        return this._multipartParser.getHeader('to', true, true);
+        return this.#multipartParser.getHeader('to', true, true);
     }
 
     getReplyTo() {
-        return this._multipartParser.getHeader('reply-to', true, true);
+        return this.#multipartParser.getHeader('reply-to', true, true);
+    }
+
+    getHeader(key, decode=false, removeLineBreaks=false) {
+        return this.#multipartParser.getHeader(key, decode, removeLineBreaks);
     }
 
     getAttachments() {
-        let attachments=[], mixedPart = this._multipartParser.getPartByContentType('multipart', 'mixed');
+        let attachments=[], mixedPart = this.#multipartParser.getPartByContentType('multipart', 'mixed');
 
         if (mixedPart) {
             for (const subPart of mixedPart.getMultiParts()) {
@@ -64,13 +68,13 @@ export class EmlReader {
     }
 
     getMessageText() {
-        let text = this._multipartParser.getPartByContentType('text', 'plain');
+        let text = this.#multipartParser.getPartByContentType('text', 'plain');
         if (text && !text.isAttachment) {
             return text.getBody();
         }
 
         // HTML to text
-        let html = this._multipartParser.getPartByContentType('text', 'html');
+        let html = this.#multipartParser.getPartByContentType('text', 'html');
         if (html && !html.isAttachment) {
             let htmlStr = html.getBody(), hIndex = htmlStr.indexOf('<body');
             if (hIndex !== -1) {
@@ -87,13 +91,13 @@ export class EmlReader {
     }
 
     getMessageHtml() {
-        let html = this._multipartParser.getPartByContentType('text', 'html');
+        let html = this.#multipartParser.getPartByContentType('text', 'html');
         if (html && !html.isAttachment) {
             return html.getBody();
         }
 
         // text to html
-        let text = this._multipartParser.getPartByContentType('text', 'plain');
+        let text = this.#multipartParser.getPartByContentType('text', 'plain');
         if (text && !text.isAttachment) {
             return text.getBody().replace(/\r?\n/g, '<br />');
         }

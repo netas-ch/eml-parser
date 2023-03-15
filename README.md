@@ -14,6 +14,7 @@ check https://raw.githack.com/netas-ch/eml-parser/main/_test/test.html for a dem
     console.log(email.getCc());
     console.log(email.getTo());
     console.log(email.getReplyTo());
+    console.log(email.getAttachments());
 
 # license
 Copyright © 2023 Netas AG - MIT license
