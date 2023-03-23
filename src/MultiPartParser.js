@@ -11,6 +11,7 @@ export class MultiPartParser {
     #body = null;
     #multiParts;
     #isAttachment = false;
+    #lineEnding;
 
     /**
      * @param {ArrayBuffer|Uint8Array} rawContent
@@ -24,6 +25,7 @@ export class MultiPartParser {
             throw new Error('invalid content for class MultiPartParser');
         }
 
+        this.#lineEnding = this.#getLineEnding(rawContent);
         const parts = this.#splitHeaderFromBody(rawContent);
 
         // parsing header
@@ -300,12 +302,40 @@ export class MultiPartParser {
         return null;
     }
 
+    #getLineEnding(arrbuf) {
+        const arr = new Uint8Array(arrbuf), r = 0x0D, n = 0x0A; // \r\n suchen
+        let unix = 0, win = 0;
+
+        for (let i = 0; i < arr.length; i++) {
+            if (arr[i] === n && arr[i-1] === r) {
+                win++;
+            } else if (arr[i] === n) {
+                unix++;
+            }
+        }
+
+        if (unix > 0 && win > 0) {
+            return 'mixed';
+        } else if (unix > 0) {
+            return 'unix';
+        } else if (win > 0) {
+            return 'windows';
+        }
+
+        return 'unknown';
+    }
+
     #splitHeaderFromBody(arrbuf) {
         const arr = new Uint8Array(arrbuf), r = 0x0D, n = 0x0A; // \r\n suchen
-        let rnrnPos = null;
+        let separatorPos = null, separatorLength=0;
         for (let i = 0; i < arr.length; i++) {
-            if (arr[i] === r && arr[i+1] === n && arr[i+2] === r && arr[i+3] === n) {
-                rnrnPos = i;
+            if (this.#lineEnding !== 'unix' && arr[i] === r && arr[i+1] === n && arr[i+2] === r && arr[i+3] === n) {
+                separatorLength = 4;
+                separatorPos = i;
+                break;
+            } else if (arr[i] === n && arr[i+1] === n) {
+                separatorLength = 2;
+                separatorPos = i;
                 break;
             }
         }
@@ -313,9 +343,9 @@ export class MultiPartParser {
         let headerArray = null;
         let bodyArray = null;
 
-        if (rnrnPos) {
-            headerArray = arr.slice(0, rnrnPos);
-            bodyArray = arr.slice(rnrnPos+4);
+        if (separatorPos) {
+            headerArray = arr.slice(0, separatorPos);
+            bodyArray = arr.slice(separatorPos+separatorLength);
         } else {
             bodyArray = arr;
         }
