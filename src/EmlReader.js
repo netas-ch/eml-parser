@@ -7,6 +7,7 @@
 
 import {MultiPartParser} from './MultiPartParser.js';
 export class EmlReader {
+    #multipartParser = null;
 
     /**
      * @param {ArrayBuffer|Uint8Array} arrayBuffer

@@ -67,6 +67,7 @@ Copyright © 2023 Netas Ltd., Switzerland.
                     addNote('getMessageText', test.getMessageText());
                     addNote('getMessageHtml', test.getMessageHtml());
                 } catch (e) {
+                    console.error(e);
                     addNote('error', e.message);
                 }
             }
