@@ -33,6 +33,10 @@ export class EmlReader {
         return this.#multipartParser.getHeader('from', true, true);
     }
 
+    getBcc() {
+        return this.#multipartParser.getHeader('bcc', true, true);
+    }
+
     getCc() {
         return this.#multipartParser.getHeader('cc', true, true);
     }
@@ -43,6 +47,14 @@ export class EmlReader {
 
     getReplyTo() {
         return this.#multipartParser.getHeader('reply-to', true, true);
+    }
+
+    getType() {
+        if (this.#multipartParser.getHeader('received')) {
+            return 'received';
+        } else {
+            return 'sent';
+        }
     }
 
     getHeader(key, decode=false, removeLineBreaks=false) {
