@@ -63,7 +63,22 @@ export class EmlReader {
 
     getAttachments() {
         let attachments=[], mixedPart = this.#multipartParser.getPartByContentType('multipart', 'mixed');
-        if (!mixedPart) {
+
+        // multipart/mixed
+        if (mixedPart) {
+            for (const subPart of mixedPart.getMultiParts()) {
+                if (subPart.isAttachment) {
+                    attachments.push({
+                        filename: subPart.getFilename(),
+                        contentType: subPart.contentType,
+                        content: subPart.getBody(),
+                        filesize: subPart.getBody().byteLength
+                    });
+                }
+            }
+
+        // multipart/octet-stream
+        } else {
             const att = this.#multipartParser.getPartByContentType('application', 'octet-stream');
             if (att && att.getFilename()) {
                 attachments.push({
@@ -73,16 +88,6 @@ export class EmlReader {
                     filesize: att.getBody().byteLength
                 });
             }
-            return attachments;
-        }
-        for (const subPart of mixedPart.getMultiParts()) {
-            if (!subPart.isAttachment) continue;
-            attachments.push({
-                filename: subPart.getFilename(),
-                contentType: subPart.contentType,
-                content: subPart.getBody(),
-                filesize: subPart.getBody().byteLength
-            });
         }
 
         return attachments;

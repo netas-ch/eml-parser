@@ -291,10 +291,11 @@ export class MultiPartParser {
         }
 
         for (let mp of me.getMultiParts()) {
-            if (!(mp instanceof MultiPartParser)) continue;
-            let subMp = this.#recursiveGetByContentType(mp, mediaType, subType);
-            if (subMp) {
-                return subMp;
+            if (mp instanceof MultiPartParser) {
+                let subMp = this.#recursiveGetByContentType(mp, mediaType, subType);
+                if (subMp) {
+                    return subMp;
+                }
             }
         }
 
