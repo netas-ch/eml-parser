@@ -168,12 +168,12 @@ export class MultiPartParser {
      * @returns {String}
      */
     getFilename() {
-        let cd = this.getHeader('Content-Disposition'), cdM = cd.match(/filename=\"?([^"\n]+)\"?/i);
+        let cd = this.getHeader('Content-Disposition'), cdM = cd && cd.match(/filename=\"?([^"\n]+)\"?/i);
         if (cdM) {
             return this.#decodeRfc1342(cdM[1]);
         }
 
-        let ct = this.getHeader('Content-Type'), ctM = ct.match(/name=\"?([^"\n]+)\"?/i);
+        let ct = this.getHeader('Content-Type'), ctM = ct && ct.match(/name=\"?([^"\n]+)\"?/i);
         if (ctM) {
             return this.#decodeRfc1342(ctM[1]);
         }
@@ -291,11 +291,10 @@ export class MultiPartParser {
         }
 
         for (let mp of me.getMultiParts()) {
-            if (mp instanceof MultiPartParser) {
-                let subMp = this.#recursiveGetByContentType(mp, mediaType, subType);
-                if (subMp) {
-                    return subMp;
-                }
+            if (!(mp instanceof MultiPartParser)) continue;
+            let subMp = this.#recursiveGetByContentType(mp, mediaType, subType);
+            if (subMp) {
+                return subMp;
             }
         }
 
@@ -425,4 +424,3 @@ export class MultiPartParser {
         });
     }
 }
-
