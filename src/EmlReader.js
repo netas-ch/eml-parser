@@ -62,35 +62,26 @@ export class EmlReader {
     }
 
     getAttachments() {
-        let attachments=[], mixedPart = this.#multipartParser.getPartByContentType('multipart', 'mixed');
-
-        // multipart/mixed
-        if (mixedPart) {
-            for (const subPart of mixedPart.getMultiParts()) {
-                if (subPart.isAttachment) {
-                    attachments.push({
-                        filename: subPart.getFilename(),
-                        contentType: subPart.contentType,
-                        content: subPart.getBody(),
-                        filesize: subPart.getBody().byteLength
-                    });
-                }
-            }
-
-        // multipart/octet-stream
-        } else {
-            const att = this.#multipartParser.getPartByContentType('application', 'octet-stream');
-            if (att && att.getFilename()) {
-                attachments.push({
-                    filename: att.getFilename(),
-                    contentType: att.contentType,
-                    content: att.getBody(),
-                    filesize: att.getBody().byteLength
-                });
-            }
+        let attachments = [];
+        const mixedPart = this.#multipartParser.getPartByContentType('multipart', 'mixed');
+        if(mixedPart) for (const subPart of mixedPart.getMultiParts()) {
+            if (!subPart.isAttachment) continue;
+            attachments.push({
+                filename: subPart.getFilename(),
+                contentType: subPart.contentType,
+                content: subPart.getBody(),
+                filesize: subPart.getBody().byteLength
+            });
         }
-
-        return attachments;
+        let atts = this.#multipartParser.getPartByContentType('application', 'octet-stream');
+        if (!atts) return attachments;
+        if (! atts instanceof Array) atts = [atts];
+        return attachments.concat(atts.filter(att => att && att.getFilename()).map(att => ({
+            filename: att.getFilename(),
+            contentType: att.contentType,
+            content: att.getBody(),
+            filesize: att.getBody().byteLength
+        })));
     }
 
     getMessageText() {
