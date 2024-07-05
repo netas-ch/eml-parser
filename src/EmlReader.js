@@ -61,7 +61,7 @@ export class EmlReader {
         return this.#multipartParser.getHeader(key, decode, removeLineBreaks);
     }
 
-    getAttachments() {
+    getAttachments(sorted = false) {
         let attachments = [];
         const mixedPart = this.#multipartParser.getPartByContentType('multipart', 'mixed');
         if(mixedPart) for (const subPart of mixedPart.getMultiParts()) {
@@ -84,12 +84,26 @@ export class EmlReader {
             if (images instanceof Array) atts = atts.concat(images);
             else atts.push(images);
         }
-        return attachments.concat(atts.filter(att => att && att.getFilename()).map(att => ({
+        const result = attachments.concat(atts.filter(att => att && att.getFilename()).map(att => ({
             filename: att.getFilename(),
             contentType: att.contentType,
             content: att.getBody(),
             filesize: att.getBody().byteLength
         })));
+        if (!sorted) return result;
+        const cids = (this.getMessageHtml().match(/ src="cid:[^"]+"/g) || [])
+            .map(s => s.substring(10,s.length-1));
+        let n = cids.length;
+        result.forEach((d, j) => {
+            let k = -1;
+            for (let i = 0; i < cids.length; i++) {
+                k = cids.indexOf(d.filename);
+                if (k > -1) break;
+            }
+            result[j].n = k > -1 ? k : n++;
+        })
+        result.sort((a,b,x='n')=>+(a[x]>b[x])-+(a[x]<b[x]));
+        return result;
     }
 
     getMessageText() {
