@@ -76,7 +76,7 @@ export class EmlReader {
         let atts = this.#multipartParser.getPartByContentType('application', 'octet-stream');
         if (!atts) {
             atts = [];
-        } else if (!atts instanceof Array) {
+        } else if (!(atts instanceof Array)) {
             atts = [atts];
         }
         const images = this.#multipartParser.getPartByContentType('image');
