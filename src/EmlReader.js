@@ -74,8 +74,16 @@ export class EmlReader {
             });
         }
         let atts = this.#multipartParser.getPartByContentType('application', 'octet-stream');
-        if (!atts) return attachments;
-        if (! atts instanceof Array) atts = [atts];
+        if (!atts) {
+            atts = [];
+        } else if (!atts instanceof Array) {
+            atts = [atts];
+        }
+        const images = this.#multipartParser.getPartByContentType('image');
+        if (images) {
+            if (images instanceof Array) atts = atts.concat(images);
+            else atts.push(images);
+        }
         return attachments.concat(atts.filter(att => att && att.getFilename()).map(att => ({
             filename: att.getFilename(),
             contentType: att.contentType,
