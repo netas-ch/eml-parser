@@ -290,16 +290,14 @@ export class MultiPartParser {
             return me;
         }
 
+        const list = [];
         for (let mp of me.getMultiParts()) {
-            if (mp instanceof MultiPartParser) {
-                let subMp = this.#recursiveGetByContentType(mp, mediaType, subType);
-                if (subMp) {
-                    return subMp;
-                }
-            }
+            if (!(mp instanceof MultiPartParser)) continue;
+            let subMp = this.#recursiveGetByContentType(mp, mediaType, subType);
+            if (subMp) list.push(subMp);
         }
-
-        return null;
+        return list.length == 1
+            ? list[0] : (list.length == 0 ? null : list);
     }
 
     #getLineEnding(arrbuf) {
