@@ -61,36 +61,49 @@ export class EmlReader {
         return this.#multipartParser.getHeader(key, decode, removeLineBreaks);
     }
 
-    getAttachments() {
-        let attachments=[], mixedPart = this.#multipartParser.getPartByContentType('multipart', 'mixed');
-
-        // multipart/mixed
-        if (mixedPart) {
-            for (const subPart of mixedPart.getMultiParts()) {
-                if (subPart.isAttachment) {
-                    attachments.push({
-                        filename: subPart.getFilename(),
-                        contentType: subPart.contentType,
-                        content: subPart.getBody(),
-                        filesize: subPart.getBody().byteLength
-                    });
-                }
-            }
-
-        // multipart/octet-stream
-        } else {
-            const att = this.#multipartParser.getPartByContentType('application', 'octet-stream');
-            if (att && att.getFilename()) {
-                attachments.push({
-                    filename: att.getFilename(),
-                    contentType: att.contentType,
-                    content: att.getBody(),
-                    filesize: att.getBody().byteLength
-                });
-            }
+    getAttachments(sorted = false) {
+        let attachments = [];
+        const mixedPart = this.#multipartParser.getPartByContentType('multipart', 'mixed');
+        if(mixedPart) for (const subPart of mixedPart.getMultiParts()) {
+            if (!subPart.isAttachment) continue;
+            attachments.push({
+                filename: subPart.getFilename(),
+                contentType: subPart.contentType,
+                content: subPart.getBody(),
+                filesize: subPart.getBody().byteLength
+            });
         }
-
-        return attachments;
+        let atts = this.#multipartParser.getPartByContentType('application', 'octet-stream');
+        if (!atts) {
+            atts = [];
+        } else if (!(atts instanceof Array)) {
+            atts = [atts];
+        }
+        const images = this.#multipartParser.getPartByContentType('image');
+        if (images) {
+            if (images instanceof Array) atts = atts.concat(images);
+            else atts.push(images);
+        }
+        const result = attachments.concat(atts.filter(att => att && att.getFilename()).map(att => ({
+            filename: att.getFilename(),
+            contentType: att.contentType,
+            content: att.getBody(),
+            filesize: att.getBody().byteLength
+        })));
+        if (!sorted) return result;
+        const cids = (this.getMessageHtml().match(/ src="cid:[^"]+"/g) || [])
+            .map(s => s.substring(10,s.length-1));
+        let n = cids.length;
+        result.forEach((d, j) => {
+            let k = -1;
+            for (let i = 0; i < cids.length; i++) {
+                k = cids.indexOf(d.filename);
+                if (k > -1) break;
+            }
+            result[j].n = k > -1 ? k : n++;
+        })
+        result.sort((a,b,x='n')=>+(a[x]>b[x])-+(a[x]<b[x]));
+        return result;
     }
 
     getMessageText() {
