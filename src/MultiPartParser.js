@@ -228,7 +228,7 @@ export class MultiPartParser {
             const decoder = new TextDecoder();
             raw = decoder.decode(raw);
         }
-        const binary_string = window.atob(raw);
+        const binary_string = atob(raw);
         const len = binary_string.length;
         const bytes = new Uint8Array(len);
         for (let i = 0; i < len; i++) {
