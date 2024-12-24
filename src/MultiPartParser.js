@@ -10,7 +10,6 @@ export class MultiPartParser {
     #headers;
     /** @type {Uint8Array|ArrayBuffer|null|string} */
     #body = null;
-    #fileSize = 0;
     /** @type {MultiPartParser[]} */
     #multiParts;
     #isAttachment = false;
@@ -102,7 +101,9 @@ export class MultiPartParser {
     }
 
     getFileSize() {
-        return this.#fileSize;
+        if (this.#body == null) return 0;
+        if (this.#body instanceof Uint8Array || this.#body instanceof ArrayBuffer) return this.#body.byteLength;
+        return new TextEncoder().encode(this.#body).length;
     }
 
     getBody() {
@@ -362,7 +363,6 @@ export class MultiPartParser {
     /** @param {Uint8Array} rawArray */
     #parseBodyApplication(rawArray) {
         this.#body = this.#decodeContent(rawArray, null);
-        this.#fileSize = rawArray.byteLength;
     }
 
     #parseBodyText(rawArray) {
@@ -381,7 +381,6 @@ export class MultiPartParser {
         const decoder = new TextDecoder();
         const bytes = new Uint8Array(arrayBuf);
         this.#body = decoder.decode(bytes);
-        this.#fileSize = bytes.byteLength;
     }
 
     #parseBodyMultipart(rawArray, contentTypeArgs) {

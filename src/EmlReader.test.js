@@ -2,6 +2,7 @@
 
 import * as fs from "node:fs/promises";
 import { describe, it } from "node:test";
+import { Buffer } from "node:buffer";
 import assert from "node:assert/strict";
 import { basename } from "node:path";
 import { EmlReader } from "../src/EmlReader.js";
@@ -11,6 +12,7 @@ const fixtures = {
     sample_sans_html: "./src/_fixtures/sample_sans_html.eml",
     sample_sans_plain: "./src/_fixtures/sample_sans_plain.eml",
     cc: "./src/_fixtures/cc.eml",
+    multipart: "./src/_fixtures/multipart.eml",
 };
 
 describe(EmlReader.name, () => {
@@ -107,6 +109,26 @@ describe(EmlReader.name, () => {
 
         it(eml.getFrom.name, () => {
             assert.deepEqual(eml.getFrom(), "Foo Bar <foo.bar@example.com>");
+        });
+    });
+
+    describe(basename(fixtures.multipart), async () => {
+        const eml = new EmlReader(await fs.readFile(fixtures.multipart));
+
+        it(eml.getAttachments.name, async () => {
+            const attachments = eml.getAttachments();
+
+            assert.deepEqual(attachments.length, 1);
+            assert.deepEqual(attachments[0].filename, 'tired_boot.FJ010019.jpeg');
+            assert.deepEqual(attachments[0].contentType, 'image/jpeg');
+
+            const content = attachments[0].content;
+            const expectedByteLength = 10442;
+
+            assert(content instanceof ArrayBuffer);
+            assert.deepEqual(content.byteLength, expectedByteLength);
+            assert.deepEqual(attachments[0].filesize, content.byteLength);
+            assert.deepEqual(Buffer.from(content), await fs.readFile('./src/_fixtures/tired_boot.FJ010019.jpeg'));
         });
     });
 });
