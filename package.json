@@ -1,0 +1,10 @@
+{
+  "type": "module",
+  "version": "0.0.0",
+  "description": "A simple javascript parser to read .eml (E-Mail) files",
+  "main": "src/EmlReader.js",
+  "scripts": {
+    "test": "node --test --watch src/*.test.js"
+  },
+  "license": "MIT"
+}

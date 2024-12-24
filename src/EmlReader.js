@@ -6,12 +6,14 @@
  */
 
 import {MultiPartParser} from './MultiPartParser.js';
+import {htmlToPlainText, plainTextToHtml} from './html.js';
+
 export class EmlReader {
-    #multipartParser = null;
+    /** @type {MultiPartParser} */
+    #multipartParser;
 
     /**
      * @param {ArrayBuffer|Uint8Array} arrayBuffer
-     * @returns {EmlReader}
      */
     constructor(arrayBuffer) {
         this.#multipartParser = new MultiPartParser(arrayBuffer);
@@ -57,8 +59,22 @@ export class EmlReader {
         }
     }
 
+    /**
+     * @param {string} key
+     * @param {boolean} decode
+     * @param {boolean} removeLineBreaks
+     */
     getHeader(key, decode=false, removeLineBreaks=false) {
         return this.#multipartParser.getHeader(key, decode, removeLineBreaks);
+    }
+
+    /**
+     * @param {string} key
+     * @param {boolean} decode
+     * @param {boolean} removeLineBreaks
+     */
+    getHeaders(key, decode=false, removeLineBreaks=false) {
+        return this.#multipartParser.getHeaders(key, decode, removeLineBreaks);
     }
 
     getAttachments() {
@@ -72,7 +88,7 @@ export class EmlReader {
                         filename: subPart.getFilename(),
                         contentType: subPart.contentType,
                         content: subPart.getBody(),
-                        filesize: subPart.getBody().byteLength
+                        filesize: subPart.getFileSize(),
                     });
                 }
             }
@@ -85,7 +101,7 @@ export class EmlReader {
                     filename: att.getFilename(),
                     contentType: att.contentType,
                     content: att.getBody(),
-                    filesize: att.getBody().byteLength
+                    filesize: att.getFileSize(),
                 });
             }
         }
@@ -93,6 +109,7 @@ export class EmlReader {
         return attachments;
     }
 
+    /** @returns {string|null} */
     getMessageText() {
         let text = this.#multipartParser.getPartByContentType('text', 'plain');
         if (text && !text.isAttachment) {
@@ -102,20 +119,13 @@ export class EmlReader {
         // HTML to text
         let html = this.#multipartParser.getPartByContentType('text', 'html');
         if (html && !html.isAttachment) {
-            let htmlStr = html.getBody(), hIndex = htmlStr.indexOf('<body');
-            if (hIndex !== -1) {
-                htmlStr = htmlStr.substring(hIndex);
-            }
-            htmlStr = htmlStr.replace(/<style[\s\w\W]+<\/style>/g, '');
-
-            let el = document.createElement('div');
-            el.innerHTML = htmlStr;
-            return el.innerText.replace(/\r?\n\s+\r?\n/g, "\n\n").trim();
+            return htmlToPlainText(html.getBody());
         }
 
         return null;
     }
 
+    /** @returns {string|null} */
     getMessageHtml() {
         let html = this.#multipartParser.getPartByContentType('text', 'html');
         if (html && !html.isAttachment) {
@@ -125,7 +135,7 @@ export class EmlReader {
         // text to html
         let text = this.#multipartParser.getPartByContentType('text', 'plain');
         if (text && !text.isAttachment) {
-            return text.getBody().replace(/\r?\n/g, '<br />');
+            return plainTextToHtml(text.getBody());
         }
 
         return null;

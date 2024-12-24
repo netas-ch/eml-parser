@@ -5,17 +5,19 @@
  * @date    2023-02-17
  */
 
-
 export class MultiPartParser {
+    /** @type {Partial<Record<string, string[]>>} */
     #headers;
+    /** @type {Uint8Array|ArrayBuffer|null|string} */
     #body = null;
+    #fileSize = 0;
+    /** @type {MultiPartParser[]} */
     #multiParts;
     #isAttachment = false;
     #lineEnding;
 
     /**
      * @param {ArrayBuffer|Uint8Array} rawContent
-     * @returns {MultiPartParser}
      */
     constructor(rawContent) {
         this.#headers = {};
@@ -39,15 +41,8 @@ export class MultiPartParser {
                 if (sepPos !== -1) {
                     const key = header.substring(0, sepPos).toLowerCase().trim(), value=header.substring(sepPos+1).trim();
 
-                    if (this.#headers[key] && typeof this.#headers[key] === 'string') {
-                        this.#headers[key] = [this.#headers[key]];
-                    }
-                    if (this.#headers[key]) {
-                        this.#headers[key].push(value);
-
-                    } else {
-                        this.#headers[key] = value;
-                    }
+                    this.#headers[key] ??= [];
+                    this.#headers[key].push(value);
                 }
             }
         }
@@ -56,7 +51,7 @@ export class MultiPartParser {
         let contentType = this.getContentType();
 
         // Attachment
-        const contentDisposition = this.getHeader('Content-Disposition');
+        const [contentDisposition] = this.getHeaders('Content-Disposition');
         if (contentDisposition && contentDisposition.match(/attachment/i)) {
             this.#isAttachment = true;
         }
@@ -93,10 +88,9 @@ export class MultiPartParser {
 
     /**
      * returns the content type as a object.
-     * @returns {Object}
      */
     getContentType() {
-        let ct = this.getHeader('Content-Type');
+        let [ct] = this.getHeaders('Content-Type');
         if (ct) {
             let prts = ct.match(/([a-z]+)\/([a-z0-9\-\.\+_]+);?((?:.|\s)*)$/i);
             if (prts) {
@@ -107,14 +101,18 @@ export class MultiPartParser {
         return { mediaType: null, subType: null, args: null };
     }
 
+    getFileSize() {
+        return this.#fileSize;
+    }
+
     getBody() {
         return this.#body;
     }
 
     /**
      * sarch a MultiPart with a specific media type
-     * @param {String} mediaType
-     * @param {String|null} subType
+     * @param {string} mediaType
+     * @param {string|null} subType
      * @returns {MultiPartParser|null}
      */
     getPartByContentType(mediaType, subType=null) {
@@ -127,33 +125,31 @@ export class MultiPartParser {
     }
 
     /**
-     * returns a header. If a header occurs more than once, a array is returned.
-     * @param {String} key
-     * @param {Boolean} decode
-     * @param {Boolean} removeLineBreaks
-     * @returns {String|Array|null}
+     * @param {string} key
+     * @param {boolean} decode
+     * @param {boolean} removeLineBreaks
+     * @returns {string|null}
      */
-    getHeader(key, decode=false, removeLineBreaks=false) {
-        let val = null;
+    getHeader(key, decode = false, removeLineBreaks = false) {
+        const [result] = this.getHeaders(key, decode, removeLineBreaks);
+        return result ?? null;
+    }
 
-        if (this.#headers[key.toLowerCase()]) {
-            val = this.#headers[key.toLowerCase()];
+    /**
+     * Returns all headers for a given key.
+     * @param {string} key
+     * @param {boolean} decode
+     * @param {boolean} removeLineBreaks
+     */
+    getHeaders(key, decode=false, removeLineBreaks=false) {
+        let val = this.#headers[key.toLowerCase()] ?? [];
+
+        if (decode) {
+            val = val.map(this.#decodeRfc1342.bind(this));
         }
 
-        if (val && decode) {
-            if (typeof val === 'string') {
-                val = this.#decodeRfc1342(val);
-            } else {
-                val = val.map(this.#decodeRfc1342);
-            }
-        }
-
-        if (val && removeLineBreaks) {
-            if (typeof val === 'string') {
-                val = val.replace(/\r?\n\s/g, '');
-            } else {
-                val = val.map((v) => { return v.replace(/\r?\n\s/g, ''); });
-            }
+        if (removeLineBreaks) {
+            val = val.map((v) => { return v.replace(/\r?\n\s/g, ''); });
         }
 
         return val;
@@ -165,15 +161,15 @@ export class MultiPartParser {
 
     /**
      * returns the filename of the content, if found
-     * @returns {String}
+     * @returns {string}
      */
     getFilename() {
-        let cd = this.getHeader('Content-Disposition'), cdM = cd && cd.match(/filename=\"?([^"\n]+)\"?/i);
+        let [cd] = this.getHeaders('Content-Disposition'), cdM = cd && cd.match(/filename=\"?([^"\n]+)\"?/i);
         if (cdM) {
             return this.#decodeRfc1342(cdM[1]);
         }
 
-        let ct = this.getHeader('Content-Type'), ctM = ct && ct.match(/name=\"?([^"\n]+)\"?/i);
+        let [ct] = this.getHeaders('Content-Type'), ctM = ct && ct.match(/name=\"?([^"\n]+)\"?/i);
         if (ctM) {
             return this.#decodeRfc1342(ctM[1]);
         }
@@ -185,8 +181,12 @@ export class MultiPartParser {
     // PRIVATE
     // *******************
 
+    /**
+     * @param {string|Uint8Array} rawArray
+     * @param {string|null} charset
+     */
     #decodeContent(rawArray, charset=null) {
-        let contentTransferEncoding = this.getHeader('Content-Transfer-Encoding');
+        let [contentTransferEncoding] = this.getHeaders('Content-Transfer-Encoding');
         if (contentTransferEncoding) {
             contentTransferEncoding = contentTransferEncoding.toUpperCase();
         } else {
@@ -202,6 +202,9 @@ export class MultiPartParser {
         }
     }
 
+    /**
+     * @param {string} string
+     */
     #decodeRfc1342(string) {
         // =?utf-8?Q?Kostensch=C3=A4tzung=5F451.pdf?=
         const decoder = new TextDecoder();
@@ -219,8 +222,8 @@ export class MultiPartParser {
     }
 
     /**
-     * @param {Uint8Array|String} raw
-     * @param {String|null} charset
+     * @param {Uint8Array|string} raw
+     * @param {string|null} charset
      * @returns {ArrayBuffer}
      */
     #decodeBase64(raw, charset=null) {
@@ -246,9 +249,9 @@ export class MultiPartParser {
     }
 
     /**
-     * @param {Uint8Array|String} raw
-     * @param {String} charset
-     * @param {Bool} replaceUnderline
+     * @param {Uint8Array|string} raw
+     * @param {string|null} charset
+     * @param {boolean} replaceUnderline
      * @returns {ArrayBuffer}
      */
     #decodeQuotedPrintable(raw, charset, replaceUnderline=false) {
@@ -262,7 +265,7 @@ export class MultiPartParser {
             raw = raw.replace(/_/g, ' ');
         }
 
-        const dc = new TextDecoder(charset ? charset : 'utf-8');
+        const dc = new TextDecoder(charset ?? 'utf-8');
         const str = raw.replace(/[\t\x20]$/gm, "").replace(/=(?:\r\n?|\n)/g, "").replace(/((?:=[a-fA-F0-9]{2})+)/g, (m) => {
             const cd = m.substring(1).split('='), uArr=new Uint8Array(cd.length);
             for (let i = 0; i < cd.length; i++) {
@@ -347,14 +350,19 @@ export class MultiPartParser {
             headerArray = arr.slice(0, separatorPos);
             bodyArray = arr.slice(separatorPos+separatorLength);
         } else {
-            bodyArray = arr;
+            // https://docs.fileformat.com/email/eml/#headers-information
+            // "An EML file consists of Headers information and optionally message body."
+            // (i.e. header is required but body is optional)
+            headerArray = arr;
         }
 
         return { header: headerArray, body: bodyArray };
     }
 
+    /** @param {Uint8Array} rawArray */
     #parseBodyApplication(rawArray) {
         this.#body = this.#decodeContent(rawArray, null);
+        this.#fileSize = rawArray.byteLength;
     }
 
     #parseBodyText(rawArray) {
@@ -371,7 +379,9 @@ export class MultiPartParser {
 
         // Text always as utf-8
         const decoder = new TextDecoder();
-        this.#body = decoder.decode(new Uint8Array(arrayBuf));
+        const bytes = new Uint8Array(arrayBuf);
+        this.#body = decoder.decode(bytes);
+        this.#fileSize = bytes.byteLength;
     }
 
     #parseBodyMultipart(rawArray, contentTypeArgs) {
