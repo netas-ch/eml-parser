@@ -41,13 +41,14 @@ export function htmlToPlainText(html) {
     // we use `[ \t\r\n]` instead of `\s` to preserve non-breaking spaces
     return html
         .replaceAll(/[ \t\r\n]+/g, ' ')
-        .replaceAll(/[ \t\r\n]*<br[^>]*>[ \t\r\n]*/gi, '\n')
-        .replaceAll(/[ \t\r\n]*<\/?(?:p|div|h[1-6]|th|td)[^>]*>[ \t\r\n]*/gi, '\n\n')
+        .replaceAll(/ *<br[^>]*> */gi, '\n')
+        .replaceAll(/ *<\/?(?:p|div|h[1-6]|th|td)[^>]*> */gi, '\n\n')
         .replaceAll(/<[^>]*>/g, '')
-        .replaceAll(/(\n *){3,}/g, '\n\n')
+        .replaceAll(/&(#?\w+);/g, (_, x) => unescapeEntity(x))
+        .replaceAll(/^ +$/gm, '')
+        .replaceAll(/\n{3,}/g, '\n\n')
         .replaceAll(/ {2,}/g, ' ')
-        .replaceAll(/^[ \t\r\n]+|[ \t\r\n]+$/g, '')
-        .replaceAll(/&(#?\w+);/g, (_, x) => unescapeEntity(x));
+        .replaceAll(/^[ \n]+|[ \n]+$/g, '');
 }
 
 /** @param {string} text */
